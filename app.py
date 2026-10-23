@@ -2,6 +2,7 @@
 import streamlit as st
 import pandas as pd
 import joblib
+import gdown
 from pathlib import Path
 
 st.set_page_config(
@@ -12,9 +13,31 @@ st.set_page_config(
 st.title("Blood Glucose Prediction")
 st.write("Enter the measurements below to predict blood glucose one hour ahead.")
 
-# Load the trained model from this folder
+# Model file location
 model_path = Path(__file__).parent / "glucose_model.pkl"
-model = joblib.load(model_path)
+
+# Download the model from Google Drive if it is not available locally
+if not model_path.exists():
+    file_id = "1LU4pe3Z-zrRaR1BNQW5duxNRCBQi96B8"
+    download_url = f"https://drive.google.com/uc?id={file_id}"
+
+    with st.spinner("Downloading trained model. Please wait..."):
+        result = gdown.download(
+            download_url,
+            str(model_path),
+            quiet=False
+        )
+
+    if result is None or not model_path.exists():
+        st.error("Model download failed. Check the Google Drive sharing settings.")
+        st.stop()
+
+# Load the trained model
+try:
+    model = joblib.load(model_path)
+except Exception as e:
+    st.error(f"Could not load the trained model: {e}")
+    st.stop()
 
 st.subheader("Enter your values")
 
@@ -52,7 +75,10 @@ if submitted:
     prediction = float(model.predict(input_data)[0])
 
     st.subheader("Prediction result")
-    st.metric("Predicted blood glucose after one hour", f"{prediction:.2f}")
+    st.metric(
+        "Predicted blood glucose after one hour",
+        f"{prediction:.2f}"
+    )
 
     st.warning(
         "This is an experimental ML prediction, not medical advice. "
